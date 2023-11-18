@@ -1,8 +1,0 @@
-Package: lodepng
-Version: 2021-12-04
-Port-Version: 1
-Depends: vcpkg-cmake, vcpkg-cmake-config
-Architecture: x64-windows
-Multi-Arch: same
-Abi: 55e88aa6d1521fffc25d5de1c9504e07ae65a4e888f285af292febb8961738a3
-Description: PNG encoder and decoder in C++

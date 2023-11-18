@@ -1,7 +1,0 @@
-C:/Users/lando/source/repos/mandelbrot/vcpkg_installed/vcpkg/blds/lodepng/x64-windows-rel/CMakeFiles/lodepng.dir
-C:/Users/lando/source/repos/mandelbrot/vcpkg_installed/vcpkg/blds/lodepng/x64-windows-rel/CMakeFiles/lodepng-c.dir
-C:/Users/lando/source/repos/mandelbrot/vcpkg_installed/vcpkg/blds/lodepng/x64-windows-rel/CMakeFiles/edit_cache.dir
-C:/Users/lando/source/repos/mandelbrot/vcpkg_installed/vcpkg/blds/lodepng/x64-windows-rel/CMakeFiles/rebuild_cache.dir
-C:/Users/lando/source/repos/mandelbrot/vcpkg_installed/vcpkg/blds/lodepng/x64-windows-rel/CMakeFiles/list_install_components.dir
-C:/Users/lando/source/repos/mandelbrot/vcpkg_installed/vcpkg/blds/lodepng/x64-windows-rel/CMakeFiles/install.dir
-C:/Users/lando/source/repos/mandelbrot/vcpkg_installed/vcpkg/blds/lodepng/x64-windows-rel/CMakeFiles/install/local.dir
