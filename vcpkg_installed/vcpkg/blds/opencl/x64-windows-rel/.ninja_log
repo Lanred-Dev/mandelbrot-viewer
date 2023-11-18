@@ -1,0 +1,12 @@
+# ninja log v5
+43	196	7219276806500465	CMakeFiles/OpenCL.dir/loader/windows/OpenCL.rc.res	18dec3f31b0973fc
+6	500	7219276809493033	CMakeFiles/OpenCL.dir/loader/icd.c.obj	f3e9d070c667ff11
+11	509	7219276809498035	CMakeFiles/OpenCL.dir/loader/icd_dispatch.c.obj	edb908e18a17688d
+23	515	7219276809518053	CMakeFiles/OpenCL.dir/loader/windows/icd_windows_dxgk.c.obj	551ee5f977e78e87
+38	517	7219276809553084	CMakeFiles/OpenCL.dir/loader/windows/icd_windows_apppackage.c.obj	bdf27e63fe77632c
+28	521	7219276809718224	CMakeFiles/OpenCL.dir/loader/windows/icd_windows_envvars.c.obj	9d3b85e0561ac40e
+32	535	7219276809888368	CMakeFiles/OpenCL.dir/loader/windows/icd_windows_hkr.c.obj	d596f76bfc68e499
+18	557	7219276810103555	CMakeFiles/OpenCL.dir/loader/windows/icd_windows.c.obj	a3619bf9f188513f
+14	574	7219276810278714	CMakeFiles/OpenCL.dir/loader/icd_dispatch_generated.c.obj	b62180f809625ff9
+574	802	7219276812540646	OpenCL.dll	c082c2c474019302
+574	802	7219276812540646	OpenCL.lib	c082c2c474019302
