@@ -3,85 +3,23 @@
 #include <future>
 #include <vector>
 #include <iomanip>
-#include <sstream>
 #include <filesystem>
-#include <chrono>
-#include <ctime>
+#include <cassert>
 #include "lodepng.h"
+#include "iterationsToColor.h"
+#include "getUserInput.h"
+#include "generateName.h"
+#include "progressBar.h"
+#include "combineChunks.h"
 
 using namespace std;
 namespace fs = std::filesystem;
 
-void updateProgressBar(int progress, int total) {
-    const int barWidth = 50;
-    float progressRatio = static_cast<float>(progress) / total;
-    int barProgress = static_cast<int>(barWidth * progressRatio) + 1;
-
-    cout << "[";
-    for (int i = 0; i < barWidth; ++i) {
-        if (i < barProgress) {
-            cout << "=";
-        }
-        else {
-            cout << " ";
-        }
-    }
-    cout << "] " << setw(3) << static_cast<int>(progressRatio * 100.0) + 1 << "%\r";
-    cout.flush();
-}
-
-int getUserInput(const char* message) {
-    int result;
-    cout << message;
-    cin >> result;
-    return result;
-}
-
-void iterationsToColor(int iterations, int maxIterations, uint8_t& r, uint8_t& g, uint8_t& b) {
-    double hue = static_cast<double>(iterations) / maxIterations;
-    double saturation = 1.0;
-    double brightness = (iterations < maxIterations) ? 1.0 : 0.0;
-
-    double c = brightness * saturation;
-    double x = c * (1 - abs(fmod(hue * 6.0, 2.0) - 1));
-    double m = brightness - c;
-
-    if (hue < 1.0 / 6.0) {
-        r = static_cast<uint8_t>((c + m) * 255);
-        g = static_cast<uint8_t>((x + m) * 255);
-        b = static_cast<uint8_t>(m * 255);
-    }
-    else if (hue < 2.0 / 6.0) {
-        r = static_cast<uint8_t>((x + m) * 255);
-        g = static_cast<uint8_t>((c + m) * 255);
-        b = static_cast<uint8_t>(m * 255);
-    }
-    else if (hue < 3.0 / 6.0) {
-        r = static_cast<uint8_t>(m * 255);
-        g = static_cast<uint8_t>((c + m) * 255);
-        b = static_cast<uint8_t>((x + m) * 255);
-    }
-    else if (hue < 4.0 / 6.0) {
-        r = static_cast<uint8_t>(m * 255);
-        g = static_cast<uint8_t>((x + m) * 255);
-        b = static_cast<uint8_t>((c + m) * 255);
-    }
-    else if (hue < 5.0 / 6.0) {
-        r = static_cast<uint8_t>((x + m) * 255);
-        g = static_cast<uint8_t>(m * 255);
-        b = static_cast<uint8_t>((c + m) * 255);
-    }
-    else {
-        r = static_cast<uint8_t>((c + m) * 255);
-        g = static_cast<uint8_t>(m * 255);
-        b = static_cast<uint8_t>((x + m) * 255);
-    }
-}
-
-void generateMandelbrotRow(int y, int width, int height, int maxIterations, double realMin, double realMax, double complexMin, double complexMax, vector<uint8_t>& pixels) {
+void generateRow(int y, int actualY, int xChunkStart, int width, int actualWidth, int actualHeight, int maxIterations, double realMin, double realMax, double complexMin, double complexMax, vector<uint8_t>& pixels) {
     for (int x = 0; x < width; ++x) {
-        double xComplex = x * ((realMax - realMin) / (width - 1)) + realMin;
-        double yComplex = y * (complexMax - complexMin) / (height - 1) + complexMin;
+        int actualX = x + xChunkStart;
+        double xComplex = actualX * ((realMax - realMin) / (actualWidth - 1)) + realMin;
+        double yComplex = actualY * (complexMax - complexMin) / (actualHeight - 1) + complexMin;
         complex<double> complexNumber(xComplex, yComplex);
         complex<double> iterationComplex(xComplex, yComplex);
         int iterations = 0;
@@ -102,47 +40,87 @@ void generateMandelbrotRow(int y, int width, int height, int maxIterations, doub
     }
 }
 
-string generateFilename() {
-    auto now = chrono::system_clock::now();
-    auto timepoint = chrono::system_clock::to_time_t(now);
+void generateChunk(string resultFolder, int chunk, int chunkX, int chunkY, int width, int actualWidth, int height, int actualHeight, int maxIterations, double realMin, double realMax, double complexMin, double complexMax) {
+    cout << "Chunk " << chunk << endl;
+    cout << "Generating chunk..." << endl;
 
-    stringstream ss;
-    struct tm timeInfo;
-    localtime_s(&timeInfo, &timepoint);
-    ss << put_time(&timeInfo, "%Y%m%d_%H%M%S");
-
-    return "result_" + ss.str() + ".png";
-}
-
-int main() {
-    int width = getUserInput("Enter width:");
-    int height = getUserInput("Enter height:");
-    int maxIterations = getUserInput("Enter iterations:");
-    double realMin = getUserInput("Enter real min:");
-    double realMax = getUserInput("Enter real max:");
-    double complexMax = getUserInput("Enter complex min:");
-    double complexMin = getUserInput("Enter complex max:");
-
-    cout << endl;
-
+    int xChunkStart = width * chunkX;
+    int yChunkStart = height * chunkY;
     vector<uint8_t> pixels(width * height * 4, 0);
     vector<future<void>> futures;
 
     for (int y = 0; y < height; ++y) {
-        futures.push_back(async(launch::async, generateMandelbrotRow, y, width, height, maxIterations, realMin, realMax, complexMin, complexMax, ref(pixels)));
+        int actualY = y + yChunkStart;
+        futures.push_back(async(launch::async, generateRow, y, actualY, xChunkStart, width, actualWidth, actualHeight, maxIterations, realMin, realMax, complexMin, complexMax, ref(pixels)));
         updateProgressBar(y, height);
     }
 
+    cout << endl;
+
+    // Wait for all the rendering to complete.
     for (auto& future : futures) {
         future.wait();
     }
 
-    string filename = generateFilename();
+    cout << "Encoding chunk..." << endl;
 
-    if (lodepng::encode(filename.c_str(), pixels, width, height) == 0) {
-        cout << endl << "Generated: " << filename << endl;
-        system(("start " + filename).c_str());
+    // Next encode the image and place it in the folder.
+    string resultName = resultFolder + "/" + to_string(xChunkStart) + "-" + to_string(yChunkStart) + ".png";
+    cout << resultName << endl;
+    unsigned error = lodepng::encode(resultName.c_str(), pixels, width, height);
+
+    if (error) {
+        cerr << "Faild to generate chunk: " << lodepng_error_text(error) << endl;
     }
+    else {
+        cout << "Chunk finished." << endl << endl;
+    }
+}
+
+int main() {
+    // Get the settings.
+    int width = getUserInput("Enter width:");
+    int height = getUserInput("Enter height:");
+    int chunkSize = getUserInput("Enter chunk size:");
+    int maxIterations = getUserInput("Enter iterations:");
+    float realMin = getUserInput("Enter real min:");
+    float realMax = getUserInput("Enter real max:");
+    float complexMin = getUserInput("Enter complex min:");
+    float complexMax = getUserInput("Enter complex max:");
+
+    cout << endl;
+
+    string resultFolder = generateName();
+    fs::create_directory(resultFolder);
+
+    // Determine the amount of chunks needed.
+    int xChunks = round(width / chunkSize);
+    int yChunks = round(height / chunkSize);
+    int xChunkSize = width / xChunks;
+    int yChunkSize = height / yChunks;
+    int chunksGenerated = 0;
+
+    if (xChunkSize != chunkSize || yChunkSize != chunkSize) {
+        cout << "Corrected chunk size" << endl << "x:" << width / xChunks << endl << "y:" << height / yChunks << endl;
+    }
+
+    cout << "Chunks needed: " << xChunks * yChunks << endl << endl;
+
+    for (int x = 0; x < xChunks; ++x) {
+        for (int y = 0; y < yChunks; ++y) {
+            chunksGenerated++;
+            generateChunk(resultFolder, chunksGenerated, x, y, xChunkSize, width, yChunkSize, height, maxIterations, realMin, realMax, complexMin, complexMax);
+        }
+    }
+
+    // Combine all of the chunks.
+    cout << "Combing chunks..." << endl;
+    string resultImage = resultFolder + "/result.png";
+    combineChunks(resultFolder, resultImage, width, height);
+
+    // Open the result.
+    cout << "Finished combing chunks. Opening image..." << endl;
+    system(("start " + resultImage).c_str());
 
     return 0;
 }

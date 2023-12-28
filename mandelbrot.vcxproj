@@ -138,11 +138,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="combineChunks.cpp" />
+    <ClCompile Include="generateName.cpp" />
+    <ClCompile Include="getUserInput.cpp" />
+    <ClCompile Include="iterationsToColor.cpp" />
     <ClCompile Include="mandelbrot.cpp" />
+    <ClCompile Include="progressBar.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="vcpkg.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="combineChunks.h" />
+    <ClInclude Include="generateName.h" />
+    <ClInclude Include="getUserInput.h" />
+    <ClInclude Include="iterationsToColor.h" />
+    <ClInclude Include="progressBar.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
