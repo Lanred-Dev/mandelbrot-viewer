@@ -4,15 +4,16 @@
 #include <vector>
 #include <fstream>
 #include "shaders.h"
-#include "utils/input.h"
 
-const int WINDOW_WIDTH = 800;
-const int WINDOW_HEIGHT = 600;
+int window_width = 800;
+int window_height = 600;
 const char *WINDOW_TITLE = "Mandelbrot";
 const float ZOOM_FACTOR = 0.95f;
-int iterations;
-float realMin, realMax;
-float complexMin, complexMax;
+int iterations = 500;
+float realMin = -2.0f;
+float realMax = 2.0f;
+float complexMin = -1.5f;
+float complexMax = 1.5f;
 float offsetX = 0.0f;
 float offsetY = 0.0f;
 
@@ -20,6 +21,42 @@ void shiftView(float dx, float dy)
 {
     offsetX += dx * (realMax - realMin);
     offsetY += dy * (complexMax - complexMin);
+}
+
+void captureScreenshot(const char *filename, GLFWwindow *window)
+{
+    std::vector<unsigned char> pixels(window_width * window_height * 3);
+    glReadPixels(0, 0, window_width, window_height, GL_BGR, GL_UNSIGNED_BYTE, pixels.data());
+
+    unsigned char header[54] = {0};
+    int fileSize = 54 + window_width * window_height * 3;
+    header[0] = 'B';
+    header[1] = 'M';
+    header[2] = fileSize;
+    header[3] = fileSize >> 8;
+    header[4] = fileSize >> 16;
+    header[5] = fileSize >> 24;
+    header[10] = 54;
+    header[14] = 40;
+    header[18] = window_width;
+    header[19] = window_width >> 8;
+    header[20] = window_width >> 16;
+    header[21] = window_width >> 24;
+    header[22] = window_height;
+    header[23] = window_height >> 8;
+    header[24] = window_height >> 16;
+    header[25] = window_height >> 24;
+    header[26] = 1;
+    header[28] = 24;
+
+    std::ofstream out(filename, std::ios::binary);
+    out.write((char *)header, 54);
+    out.write((char *)pixels.data(), window_width * window_height * 3);
+    out.close();
+
+#ifdef _WIN32
+    system(("start " + std::string(filename)).c_str());
+#endif
 }
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -97,44 +134,9 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
     case GLFW_KEY_R:
     {
-        std::vector<unsigned char> pixels(WINDOW_WIDTH * WINDOW_HEIGHT * 3);
-        glReadPixels(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-
-        std::vector<unsigned char> bmpPixels(WINDOW_WIDTH * WINDOW_HEIGHT * 3);
-        for (int y = 0; y < WINDOW_HEIGHT; y++)
-        {
-            for (int x = 0; x < WINDOW_WIDTH * 3; x++)
-            {
-                bmpPixels[(y * WINDOW_WIDTH * 3) + x] = pixels[((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH * 3) + x];
-            }
-        }
-
-        // BMP header
-        unsigned char header[54] = {0};
-        int fileSize = 54 + WINDOW_WIDTH * WINDOW_HEIGHT * 3;
-        header[0] = 'B';
-        header[1] = 'M';
-        header[2] = fileSize;
-        header[3] = fileSize >> 8;
-        header[4] = fileSize >> 16;
-        header[5] = fileSize >> 24;
-        header[10] = 54;
-        header[14] = 40;
-        header[18] = WINDOW_WIDTH;
-        header[19] = WINDOW_WIDTH >> 8;
-        header[20] = WINDOW_WIDTH >> 16;
-        header[21] = WINDOW_WIDTH >> 24;
-        header[22] = WINDOW_HEIGHT;
-        header[23] = WINDOW_HEIGHT >> 8;
-        header[24] = WINDOW_HEIGHT >> 16;
-        header[25] = WINDOW_HEIGHT >> 24;
-        header[26] = 1;
-        header[28] = 24;
-
-        std::ofstream out("screenshot.bmp", std::ios::binary);
-        out.write((char *)header, 54);
-        out.write((char *)bmpPixels.data(), WINDOW_WIDTH * WINDOW_HEIGHT * 3);
-        out.close();
+        captureScreenshot("screenshot.bmp", window);
+        std::cout << "Screenshot saved as screenshot.bmp\n";
+        break;
     }
 
     default:
@@ -160,14 +162,15 @@ GLuint compileShader(GLenum type, const char *source)
     return shader;
 }
 
+void framebufferSizeCallback(GLFWwindow *window, int width, int height)
+{
+    window_height = height;
+    window_width = width;
+    glViewport(0, 0, width, height);
+}
+
 int main()
 {
-    iterations = (int)input("Enter iterations:");
-    realMin = input("Enter real min:");
-    realMax = input("Enter real max:");
-    complexMin = input("Enter complex min:");
-    complexMax = input("Enter complex max:");
-
     if (!glfwInit())
         return -1;
 
@@ -175,7 +178,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow *window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_TITLE, nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(window_width, window_height, WINDOW_TITLE, nullptr, nullptr);
     if (!window)
     {
         glfwTerminate();
@@ -220,6 +223,7 @@ int main()
     glDeleteShader(fragmentShader);
 
     glfwSetKeyCallback(window, keyCallback);
+    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
     GLint iterationsLoc = glGetUniformLocation(shaderProgram, "iterations");
     GLint realMinLoc = glGetUniformLocation(shaderProgram, "realMin");
@@ -231,7 +235,7 @@ int main()
 
     glUseProgram(shaderProgram);
     glBindVertexArray(vao);
-    glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+    glViewport(0, 0, window_width, window_height);
 
     while (!glfwWindowShouldClose(window))
     {
