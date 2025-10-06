@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 add_library(glad STATIC lib/glad.c)
 target_include_directories(glad PUBLIC include)
 
-add_executable(mandelbrot src/main.cpp src/utils/input.cpp)
+add_executable(mandelbrot src/main.cpp)
 
 target_include_directories(mandelbrot PRIVATE include)
 
