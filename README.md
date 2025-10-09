@@ -5,8 +5,11 @@ A Mandelbrot viewer that allows for real-time rendering via OpenGL and screensho
 ### Controls
 
 Arrow up/down: Increase/decrease iterations
+
 E/Q: Zoom in/out
+
 W/A/S/D: Move
+
 R: Take a screenshot of whats on screen
 
 ### Building
