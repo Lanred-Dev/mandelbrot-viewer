@@ -15,5 +15,7 @@ R: Take a screenshot of whats on screen
 ### Building
 
 -> Clone this repo
+
 -> Build using CMake
+
 -> Open mandelbrot.exe in build/Debug or build/Release
