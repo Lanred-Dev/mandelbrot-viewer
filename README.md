@@ -1,21 +1,16 @@
-# Realtime Mandelbrot viewer
+# Realtime Mandelbrot Viewer
 
-A Mandelbrot viewer that allows for real-time rendering via OpenGL and screenshot capturing.
+A simple Mandelbrot set viewer with real-time rendering using OpenGL, including the ability to capture screenshots.
 
 ### Controls
 
-Arrow up/down: Increase/decrease iterations
-
-E/Q: Zoom in/out
-
-W/A/S/D: Move
-
-R: Take a screenshot of whats on screen
+* **Arrow Up / Down**: Increase / decrease iterations
+* **E / Q**: Zoom in / out
+* **W / A / S / D**: Pan the view
+* **R**: Take a screenshot of the current view
 
 ### Building
 
--> Clone this repo
-
--> Build using CMake
-
--> Open mandelbrot.exe in build/Debug or build/Release
+1. Clone this repository
+2. Build the project using CMake
+3. Run `mandelbrot.exe` from `build/Debug` or `build/Release`
