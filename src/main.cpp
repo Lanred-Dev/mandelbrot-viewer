@@ -75,13 +75,11 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     case GLFW_KEY_UP:
     {
         iterations += 50;
-        std::cout << "Iterations: " << iterations << "\n";
         break;
     }
     case GLFW_KEY_DOWN:
     {
         iterations = std::max(50, iterations - 50);
-        std::cout << "Iterations: " << iterations << "\n";
         break;
     }
 
@@ -135,7 +133,6 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     case GLFW_KEY_R:
     {
         captureScreenshot("screenshot.bmp", window);
-        std::cout << "Screenshot saved as screenshot.bmp\n";
         break;
     }
 
