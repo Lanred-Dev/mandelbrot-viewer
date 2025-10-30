@@ -7,10 +7,11 @@
 #include <windows.h>
 #include "shaders.h"
 
+const char *WINDOW_TITLE = "Mandelbrot Viewer";
+const float ZOOM_FACTOR = 0.8f;
+
 int window_width = 800;
 int window_height = 600;
-const char *WINDOW_TITLE = "Mandelbrot";
-const float ZOOM_FACTOR = 0.95f;
 int iterations = 500;
 float realMin = -2.0f;
 float realMax = 2.0f;
