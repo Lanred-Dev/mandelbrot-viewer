@@ -12,6 +12,12 @@ A real-time Mandelbrot set viewer written in C++ using OpenGL.
 | R             | Take a screenshot of the current view |
 | Escape        | Close the application                 |
 
+### Media
+
+![Screenshot](./media/screenshot1.png)
+![Screenshot](./media/screenshot2.png)
+![Screenshot](./media/screenshot3.png)
+
 ### Requirements
 
 - C++23 (or newer) compiler
