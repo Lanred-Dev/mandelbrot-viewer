@@ -10,11 +10,13 @@ A real-time Mandelbrot set viewer written in C++ using OpenGL.
 | E / Q         | Zoom in / out                         |
 | W / A / S / D | Move around                           |
 | R             | Take a screenshot of the current view |
+| Escape        | Close the application                 |
 
 ### Requirements
 
 - C++23 (or newer) compiler
 - CMake 3.16 (or newer)
+- Windows operating system
 
 ### Building
 
