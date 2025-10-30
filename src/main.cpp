@@ -3,6 +3,8 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <algorithm>
+#include <windows.h>
 #include "shaders.h"
 
 int window_width = 800;
@@ -54,9 +56,7 @@ void captureScreenshot(const char *filename, GLFWwindow *window)
     out.write((char *)pixels.data(), window_width * window_height * 3);
     out.close();
 
-#ifdef _WIN32
     system(("start " + std::string(filename)).c_str());
-#endif
 }
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -79,7 +79,7 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
     }
     case GLFW_KEY_DOWN:
     {
-        iterations = std::max(50, iterations - 50);
+        iterations = std::max<int>(50, iterations - 50);
         break;
     }
 
@@ -149,6 +149,7 @@ GLuint compileShader(GLenum type, const char *source)
 
     int success;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+
     if (!success)
     {
         char info[512];
@@ -156,6 +157,7 @@ GLuint compileShader(GLenum type, const char *source)
         std::cerr << "Shader compile error:\n"
                   << info << "\n";
     }
+
     return shader;
 }
 
@@ -169,24 +171,34 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height)
 int main()
 {
     if (!glfwInit())
-        return -1;
+    {
+        MessageBoxA(nullptr, "Failed to initialize GLFW", "Error", MB_OK | MB_ICONERROR);
+        return EXIT_FAILURE;
+    }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWwindow *window = glfwCreateWindow(window_width, window_height, WINDOW_TITLE, nullptr, nullptr);
+
     if (!window)
     {
+        MessageBoxA(nullptr, "Failed to create GLFW window", "Error", MB_OK | MB_ICONERROR);
         glfwTerminate();
-        return -1;
+
+        return EXIT_FAILURE;
     }
+
     glfwMakeContextCurrent(window);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
-        std::cerr << "Failed to initialize GLAD\n";
-        return -1;
+        MessageBoxA(nullptr, "Failed to initialize GLAD", "Error", MB_OK | MB_ICONERROR);
+        glfwDestroyWindow(window);
+        glfwTerminate();
+
+        return EXIT_FAILURE;
     }
 
     float vertices[] = {-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f};
@@ -209,15 +221,21 @@ int main()
 
     int success;
     glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
     if (!success)
     {
         char info[512];
         glGetProgramInfoLog(shaderProgram, 512, nullptr, info);
-        std::cerr << "Shader program link error:\n"
-                  << info << "\n";
+        MessageBoxA(nullptr, info, "Shader Program Link Error", MB_OK | MB_ICONERROR);
+        glDeleteProgram(shaderProgram);
+        glfwDestroyWindow(window);
+        glfwTerminate();
+
+        return EXIT_FAILURE;
     }
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
 
     glfwSetKeyCallback(window, keyCallback);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
@@ -254,5 +272,5 @@ int main()
 
     glfwDestroyWindow(window);
     glfwTerminate();
-    return 0;
+    return EXIT_SUCCESS;
 }
