@@ -20,9 +20,11 @@ A real-time Mandelbrot set viewer written in C++ using OpenGL.
 
 ### Requirements
 
-- C++23 (or newer) compiler
-- CMake 3.16 (or newer)
 - Windows operating system
+- C++23 (or newer) compiler *
+- CMake 3.16 (or newer) *
+
+* Required only if building from source
 
 ### Building
 
