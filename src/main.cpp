@@ -168,7 +168,7 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
-int main()
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     if (!glfwInit())
     {

@@ -12,3 +12,4 @@ add_executable(mandelbrot src/main.cpp lib/glad.c)
 target_include_directories(mandelbrot PRIVATE include)
 
 target_link_libraries(mandelbrot PRIVATE glfw3 opengl32 gdi32)
+set_target_properties(mandelbrot PROPERTIES WIN32_EXECUTABLE TRUE)
