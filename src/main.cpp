@@ -240,13 +240,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     glfwSetKeyCallback(window, keyCallback);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
-    GLint iterationsLoc = glGetUniformLocation(shaderProgram, "iterations");
-    GLint realMinLoc = glGetUniformLocation(shaderProgram, "realMin");
-    GLint realMaxLoc = glGetUniformLocation(shaderProgram, "realMax");
-    GLint complexMinLoc = glGetUniformLocation(shaderProgram, "complexMin");
-    GLint complexMaxLoc = glGetUniformLocation(shaderProgram, "complexMax");
-    GLint offsetXLoc = glGetUniformLocation(shaderProgram, "offsetX");
-    GLint offsetYLoc = glGetUniformLocation(shaderProgram, "offsetY");
+    GLint iterationsLocation = glGetUniformLocation(shaderProgram, "iterations");
+    GLint realMinLocation = glGetUniformLocation(shaderProgram, "realMin");
+    GLint realMaxLocation = glGetUniformLocation(shaderProgram, "realMax");
+    GLint complexMinLocation = glGetUniformLocation(shaderProgram, "complexMin");
+    GLint complexMaxLocation = glGetUniformLocation(shaderProgram, "complexMax");
+    GLint offsetXLocation = glGetUniformLocation(shaderProgram, "offsetX");
+    GLint offsetYLocation = glGetUniformLocation(shaderProgram, "offsetY");
 
     glUseProgram(shaderProgram);
     glBindVertexArray(vao);
@@ -257,13 +257,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        glUniform1i(iterationsLoc, iterations);
-        glUniform1f(realMinLoc, realMin);
-        glUniform1f(realMaxLoc, realMax);
-        glUniform1f(complexMinLoc, complexMin);
-        glUniform1f(complexMaxLoc, complexMax);
-        glUniform1f(offsetXLoc, offsetX);
-        glUniform1f(offsetYLoc, offsetY);
+        glUniform1i(iterationsLocation, iterations);
+        glUniform1f(realMinLocation, realMin);
+        glUniform1f(realMaxLocation, realMax);
+        glUniform1f(complexMinLocation, complexMin);
+        glUniform1f(complexMaxLocation, complexMax);
+        glUniform1f(offsetXLocation, offsetX);
+        glUniform1f(offsetYLocation, offsetY);
 
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glfwSwapBuffers(window);
