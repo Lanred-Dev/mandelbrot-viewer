@@ -4,35 +4,53 @@
 #include <vector>
 #include <fstream>
 #include <algorithm>
+#include <chrono>
+#include <string>
 #include <windows.h>
 #include "shaders.h"
 
 const char *WINDOW_TITLE = "Mandelbrot Viewer";
-const float ZOOM_FACTOR = 0.8f;
+const double ZOOM_FACTOR = 0.8;
 
-int window_width = 800;
-int window_height = 600;
+int windowWidth = 800;
+int windowHeight = 600;
 int iterations = 500;
-float realMin = -2.0f;
-float realMax = 2.0f;
-float complexMin = -1.5f;
-float complexMax = 1.5f;
-float offsetX = 0.0f;
-float offsetY = 0.0f;
+double realMin = -2.0;
+double realMax = 2.0;
+double complexMin = -1.5;
+double complexMax = 1.5;
 
-void shiftView(float dx, float dy)
+void shiftView(double dx, double dy)
 {
-    offsetX += dx * (realMax - realMin);
-    offsetY += dy * (complexMax - complexMin);
+    double realSpan = realMax - realMin;
+    double complexSpan = complexMax - complexMin;
+
+    realMin += dx * realSpan;
+    realMax += dx * realSpan;
+    complexMin += dy * complexSpan;
+    complexMax += dy * complexSpan;
+}
+
+void zoomView(double zoomFactor)
+{
+    double centerReal = (realMin + realMax) / 2.0;
+    double centerComplex = (complexMin + complexMax) / 2.0;
+    double realRange = (realMax - realMin) * zoomFactor;
+    double complexRange = (complexMax - complexMin) * zoomFactor;
+
+    realMin = centerReal - realRange / 2.0;
+    realMax = centerReal + realRange / 2.0;
+    complexMin = centerComplex - complexRange / 2.0;
+    complexMax = centerComplex + complexRange / 2.0;
 }
 
 void captureScreenshot(const char *filename, GLFWwindow *window)
 {
-    std::vector<unsigned char> pixels(window_width * window_height * 3);
-    glReadPixels(0, 0, window_width, window_height, GL_BGR, GL_UNSIGNED_BYTE, pixels.data());
+    std::vector<unsigned char> pixels(windowWidth * windowHeight * 3);
+    glReadPixels(0, 0, windowWidth, windowHeight, GL_BGR, GL_UNSIGNED_BYTE, pixels.data());
 
     unsigned char header[54] = {0};
-    int fileSize = 54 + window_width * window_height * 3;
+    int fileSize = 54 + windowWidth * windowHeight * 3;
     header[0] = 'B';
     header[1] = 'M';
     header[2] = fileSize;
@@ -41,20 +59,20 @@ void captureScreenshot(const char *filename, GLFWwindow *window)
     header[5] = fileSize >> 24;
     header[10] = 54;
     header[14] = 40;
-    header[18] = window_width;
-    header[19] = window_width >> 8;
-    header[20] = window_width >> 16;
-    header[21] = window_width >> 24;
-    header[22] = window_height;
-    header[23] = window_height >> 8;
-    header[24] = window_height >> 16;
-    header[25] = window_height >> 24;
+    header[18] = windowWidth;
+    header[19] = windowWidth >> 8;
+    header[20] = windowWidth >> 16;
+    header[21] = windowWidth >> 24;
+    header[22] = windowHeight;
+    header[23] = windowHeight >> 8;
+    header[24] = windowHeight >> 16;
+    header[25] = windowHeight >> 24;
     header[26] = 1;
     header[28] = 24;
 
     std::ofstream out(filename, std::ios::binary);
     out.write((char *)header, 54);
-    out.write((char *)pixels.data(), window_width * window_height * 3);
+    out.write((char *)pixels.data(), windowWidth * windowHeight * 3);
     out.close();
 
     system(("start " + std::string(filename)).c_str());
@@ -86,54 +104,43 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
     case GLFW_KEY_E:
     {
-        float centerReal = (realMin + realMax) / 2.0f;
-        float centerComplex = (complexMin + complexMax) / 2.0f;
-        float realRange = (realMax - realMin) * ZOOM_FACTOR;
-        float complexRange = (complexMax - complexMin) * ZOOM_FACTOR;
-        realMin = centerReal - realRange / 2.0f;
-        realMax = centerReal + realRange / 2.0f;
-        complexMin = centerComplex - complexRange / 2.0f;
-        complexMax = centerComplex + complexRange / 2.0f;
+        zoomView(ZOOM_FACTOR);
         break;
     }
 
     case GLFW_KEY_Q:
     {
-        float centerReal = (realMin + realMax) / 2.0f;
-        float centerComplex = (complexMin + complexMax) / 2.0f;
-        float realRange = (realMax - realMin) / ZOOM_FACTOR;
-        float complexRange = (complexMax - complexMin) / ZOOM_FACTOR;
-        realMin = centerReal - realRange / 2.0f;
-        realMax = centerReal + realRange / 2.0f;
-        complexMin = centerComplex - complexRange / 2.0f;
-        complexMax = centerComplex + complexRange / 2.0f;
+        zoomView(1.0 / ZOOM_FACTOR);
         break;
     }
 
     case GLFW_KEY_A:
     {
-        shiftView(-0.1f, 0.0f);
+        shiftView(-0.1, 0.0);
         break;
     }
     case GLFW_KEY_D:
     {
-        shiftView(0.1f, 0.0f);
+        shiftView(0.1, 0.0);
         break;
     }
     case GLFW_KEY_W:
     {
-        shiftView(0.0f, 0.1f);
+        shiftView(0.0, 0.1);
         break;
     }
     case GLFW_KEY_S:
     {
-        shiftView(0.0f, -0.1f);
+        shiftView(0.0, -0.1);
         break;
     }
 
     case GLFW_KEY_R:
     {
-        captureScreenshot("screenshot.bmp", window);
+        auto now = std::chrono::high_resolution_clock::now();
+        auto time = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+        std::string filename = "screenshot_" + std::to_string(time) + ".bmp";
+        captureScreenshot(filename.c_str(), window);
         break;
     }
 
@@ -164,8 +171,8 @@ GLuint compileShader(GLenum type, const char *source)
 
 void framebufferSizeCallback(GLFWwindow *window, int width, int height)
 {
-    window_height = height;
-    window_width = width;
+    windowWidth = width;
+    windowHeight = height;
     glViewport(0, 0, width, height);
 }
 
@@ -177,11 +184,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return EXIT_FAILURE;
     }
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow *window = glfwCreateWindow(window_width, window_height, WINDOW_TITLE, nullptr, nullptr);
+    GLFWwindow *window = glfwCreateWindow(windowWidth, windowHeight, WINDOW_TITLE, nullptr, nullptr);
 
     if (!window)
     {
@@ -246,12 +253,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     GLint realMaxLocation = glGetUniformLocation(shaderProgram, "realMax");
     GLint complexMinLocation = glGetUniformLocation(shaderProgram, "complexMin");
     GLint complexMaxLocation = glGetUniformLocation(shaderProgram, "complexMax");
-    GLint offsetXLocation = glGetUniformLocation(shaderProgram, "offsetX");
-    GLint offsetYLocation = glGetUniformLocation(shaderProgram, "offsetY");
 
     glUseProgram(shaderProgram);
     glBindVertexArray(vao);
-    glViewport(0, 0, window_width, window_height);
+    glViewport(0, 0, windowWidth, windowHeight);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -259,12 +264,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUniform1i(iterationsLocation, iterations);
-        glUniform1f(realMinLocation, realMin);
-        glUniform1f(realMaxLocation, realMax);
-        glUniform1f(complexMinLocation, complexMin);
-        glUniform1f(complexMaxLocation, complexMax);
-        glUniform1f(offsetXLocation, offsetX);
-        glUniform1f(offsetYLocation, offsetY);
+        glUniform1d(realMinLocation, realMin);
+        glUniform1d(realMaxLocation, realMax);
+        glUniform1d(complexMinLocation, complexMin);
+        glUniform1d(complexMaxLocation, complexMax);
 
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glfwSwapBuffers(window);
