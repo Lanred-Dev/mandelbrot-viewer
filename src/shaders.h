@@ -7,11 +7,13 @@ namespace shaders
 out vec4 fColor;
 in vec2 uv;
 
-uniform int iterations;
-uniform double realMin;
-uniform double realMax;
-uniform double complexMin;
-uniform double complexMax;
+layout(std140, binding = 0) uniform Data {
+    double realMin;
+    double realMax;
+    double complexMin;
+    double complexMax;
+    int iterations;
+};
 
 void main() {
     double cx = double(uv.x) * (realMax - realMin) + realMin;

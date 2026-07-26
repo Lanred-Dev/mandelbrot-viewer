@@ -14,34 +14,38 @@ const double ZOOM_FACTOR = 0.8;
 
 int windowWidth = 800;
 int windowHeight = 600;
-int iterations = 500;
-double realMin = -2.0;
-double realMax = 2.0;
-double complexMin = -1.5;
-double complexMax = 1.5;
+
+struct Data
+{
+    double realMin;
+    double realMax;
+    double complexMin;
+    double complexMax;
+    int iterations;
+};
+
+Data *sharedData = nullptr;
 
 void shiftView(double dx, double dy)
 {
-    double realSpan = realMax - realMin;
-    double complexSpan = complexMax - complexMin;
-
-    realMin += dx * realSpan;
-    realMax += dx * realSpan;
-    complexMin += dy * complexSpan;
-    complexMax += dy * complexSpan;
+    double realSpan = sharedData->realMax - sharedData->realMin;
+    double complexSpan = sharedData->complexMax - sharedData->complexMin;
+    sharedData->realMin += dx * realSpan;
+    sharedData->realMax += dx * realSpan;
+    sharedData->complexMin += dy * complexSpan;
+    sharedData->complexMax += dy * complexSpan;
 }
 
 void zoomView(double zoomFactor)
 {
-    double centerReal = (realMin + realMax) / 2.0;
-    double centerComplex = (complexMin + complexMax) / 2.0;
-    double realRange = (realMax - realMin) * zoomFactor;
-    double complexRange = (complexMax - complexMin) * zoomFactor;
-
-    realMin = centerReal - realRange / 2.0;
-    realMax = centerReal + realRange / 2.0;
-    complexMin = centerComplex - complexRange / 2.0;
-    complexMax = centerComplex + complexRange / 2.0;
+    double centerReal = (sharedData->realMin + sharedData->realMax) / 2.0;
+    double centerComplex = (sharedData->complexMin + sharedData->complexMax) / 2.0;
+    double realRange = (sharedData->realMax - sharedData->realMin) * zoomFactor;
+    double complexRange = (sharedData->complexMax - sharedData->complexMin) * zoomFactor;
+    sharedData->realMin = centerReal - realRange / 2.0;
+    sharedData->realMax = centerReal + realRange / 2.0;
+    sharedData->complexMin = centerComplex - complexRange / 2.0;
+    sharedData->complexMax = centerComplex + complexRange / 2.0;
 }
 
 void captureScreenshot(const char *filename, GLFWwindow *window)
@@ -75,7 +79,7 @@ void captureScreenshot(const char *filename, GLFWwindow *window)
     out.write((char *)pixels.data(), windowWidth * windowHeight * 3);
     out.close();
 
-    system(("start " + std::string(filename)).c_str());
+    MessageBoxA(nullptr, (std::string("Screenshot saved to ") + std::string(filename)).c_str(), "Success", MB_OK | MB_ICONINFORMATION);
 }
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -93,12 +97,12 @@ void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
     case GLFW_KEY_UP:
     {
-        iterations += 50;
+        sharedData->iterations += 50;
         break;
     }
     case GLFW_KEY_DOWN:
     {
-        iterations = std::max<int>(50, iterations - 50);
+        sharedData->iterations = std::max<int>(50, sharedData->iterations - 50);
         break;
     }
 
@@ -221,7 +225,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     GLuint vertexShader = compileShader(GL_VERTEX_SHADER, shaders::vertexShader);
     GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, shaders::mandelbrotFragmentShader);
-
     GLuint shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram, vertexShader);
     glAttachShader(shaderProgram, fragmentShader);
@@ -248,11 +251,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     glfwSetKeyCallback(window, keyCallback);
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
-    GLint iterationsLocation = glGetUniformLocation(shaderProgram, "iterations");
-    GLint realMinLocation = glGetUniformLocation(shaderProgram, "realMin");
-    GLint realMaxLocation = glGetUniformLocation(shaderProgram, "realMax");
-    GLint complexMinLocation = glGetUniformLocation(shaderProgram, "complexMin");
-    GLint complexMaxLocation = glGetUniformLocation(shaderProgram, "complexMax");
+    GLuint ubo;
+    glGenBuffers(1, &ubo);
+    glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+    GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+    glBufferStorage(GL_UNIFORM_BUFFER, sizeof(Data), nullptr, flags);
+    sharedData = (Data *)glMapBufferRange(GL_UNIFORM_BUFFER, 0, sizeof(Data), flags);
+    sharedData->realMin = -2.0;
+    sharedData->realMax = 2.0;
+    sharedData->complexMin = -1.5;
+    sharedData->complexMax = 1.5;
+    sharedData->iterations = 500;
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
 
     glUseProgram(shaderProgram);
     glBindVertexArray(vao);
@@ -262,13 +272,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     {
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
-
-        glUniform1i(iterationsLocation, iterations);
-        glUniform1d(realMinLocation, realMin);
-        glUniform1d(realMaxLocation, realMax);
-        glUniform1d(complexMinLocation, complexMin);
-        glUniform1d(complexMaxLocation, complexMax);
-
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glfwSwapBuffers(window);
         glfwPollEvents();
