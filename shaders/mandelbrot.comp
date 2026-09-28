@@ -1,0 +1,54 @@
+#version 460 core
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(rgba32f, binding = 0) uniform writeonly image2D outputImage;
+
+layout(std140, binding = 0) uniform Data {
+    double realMin;
+    double realMax;
+    double complexMin;
+    double complexMax;
+    int iterations;
+};
+
+void main() {
+    ivec2 texelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outputImage);
+
+    if (texelCoord.x >= size.x || texelCoord.y >= size.y) {
+        return;
+    }
+
+    vec2 uv = vec2(texelCoord) / vec2(size);
+
+    double cx = double(uv.x) * (realMax - realMin) + realMin;
+    double cy = double(uv.y) * (complexMax - complexMin) + complexMin;
+
+    double zx = 0.0, zy = 0.0;
+    double zx2 = 0.0, zy2 = 0.0;
+    int iteration = 0;
+
+    while (zx2 + zy2 < 4.0 && iteration < iterations) {
+        double zx_next = zx2 - zy2 + cx;
+        double zy_next = 2.0 * zx * zy + cy;
+
+        zx = zx_next;
+        zy = zy_next;
+
+        zx2 = zx * zx;
+        zy2 = zy * zy;
+        iteration++;
+    }
+
+    vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+    if (iteration < iterations) {
+        float t = float(iteration) / float(iterations);
+        float r = 0.5 + 0.5 * cos(6.2831853 * (t * 5.0 + 0.0));
+        float g = 0.5 + 0.5 * cos(6.2831853 * (t * 5.0 + 0.15));
+        float b = 0.5 + 0.5 * cos(6.2831853 * (t * 5.0 + 0.30));
+        color = vec4(r, g, b, 1.0);
+    }
+
+    imageStore(outputImage, texelCoord, color);
+}
