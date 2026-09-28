@@ -6,14 +6,19 @@
 #include <algorithm>
 #include <chrono>
 #include <string>
+#include <sstream>
 #include <windows.h>
-#include "shaders.h"
+#include "resource.h"
+#include "utils/compileShader.hpp"
+#include "core/systems/InputManager.hpp"
 
 const char *WINDOW_TITLE = "Mandelbrot Viewer";
 const double ZOOM_FACTOR = 0.8;
 
 int windowWidth = 800;
 int windowHeight = 600;
+GLuint computeTexture = 0;
+Core::Systems::InputManager inputManager;
 
 struct Data
 {
@@ -22,9 +27,24 @@ struct Data
     double complexMin;
     double complexMax;
     int iterations;
+    int padding[3];
 };
 
 Data *sharedData = nullptr;
+
+void resizeComputeTexture(int width, int height)
+{
+    if (computeTexture != 0)
+    {
+        glDeleteTextures(1, &computeTexture);
+    }
+
+    glGenTextures(1, &computeTexture);
+    glBindTexture(GL_TEXTURE_2D, computeTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+}
 
 void shiftView(double dx, double dy)
 {
@@ -48,7 +68,7 @@ void zoomView(double zoomFactor)
     sharedData->complexMax = centerComplex + complexRange / 2.0;
 }
 
-void captureScreenshot(const char *filename, GLFWwindow *window)
+void SaveScreenshot(const char *filename, GLFWwindow *window)
 {
     std::vector<unsigned char> pixels(windowWidth * windowHeight * 3);
     glReadPixels(0, 0, windowWidth, windowHeight, GL_BGR, GL_UNSIGNED_BYTE, pixels.data());
@@ -82,95 +102,12 @@ void captureScreenshot(const char *filename, GLFWwindow *window)
     MessageBoxA(nullptr, (std::string("Screenshot saved to ") + std::string(filename)).c_str(), "Success", MB_OK | MB_ICONINFORMATION);
 }
 
-void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
+void CaptureScreenshot()
 {
-    if (action != GLFW_PRESS)
-        return;
-
-    switch (key)
-    {
-    case GLFW_KEY_ESCAPE:
-    {
-        glfwSetWindowShouldClose(window, true);
-        break;
-    }
-
-    case GLFW_KEY_UP:
-    {
-        sharedData->iterations += 50;
-        break;
-    }
-    case GLFW_KEY_DOWN:
-    {
-        sharedData->iterations = std::max<int>(50, sharedData->iterations - 50);
-        break;
-    }
-
-    case GLFW_KEY_E:
-    {
-        zoomView(ZOOM_FACTOR);
-        break;
-    }
-
-    case GLFW_KEY_Q:
-    {
-        zoomView(1.0 / ZOOM_FACTOR);
-        break;
-    }
-
-    case GLFW_KEY_A:
-    {
-        shiftView(-0.1, 0.0);
-        break;
-    }
-    case GLFW_KEY_D:
-    {
-        shiftView(0.1, 0.0);
-        break;
-    }
-    case GLFW_KEY_W:
-    {
-        shiftView(0.0, 0.1);
-        break;
-    }
-    case GLFW_KEY_S:
-    {
-        shiftView(0.0, -0.1);
-        break;
-    }
-
-    case GLFW_KEY_R:
-    {
-        auto now = std::chrono::high_resolution_clock::now();
-        auto time = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-        std::string filename = "screenshot_" + std::to_string(time) + ".bmp";
-        captureScreenshot(filename.c_str(), window);
-        break;
-    }
-
-    default:
-        break;
-    }
-}
-
-GLuint compileShader(GLenum type, const char *source)
-{
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, nullptr);
-    glCompileShader(shader);
-
-    int success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-
-    if (!success)
-    {
-        char info[512];
-        glGetShaderInfoLog(shader, 512, nullptr, info);
-        std::cerr << "Shader compile error:\n"
-                  << info << "\n";
-    }
-
-    return shader;
+    auto now = std::chrono::high_resolution_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+    std::string filename = "screenshot_" + std::to_string(time) + ".bmp";
+    SaveScreenshot(filename.c_str(), glfwGetCurrentContext());
 }
 
 void framebufferSizeCallback(GLFWwindow *window, int width, int height)
@@ -178,6 +115,7 @@ void framebufferSizeCallback(GLFWwindow *window, int width, int height)
     windowWidth = width;
     windowHeight = height;
     glViewport(0, 0, width, height);
+    resizeComputeTexture(width, height);
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
@@ -198,7 +136,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     {
         MessageBoxA(nullptr, "Failed to create GLFW window", "Error", MB_OK | MB_ICONERROR);
         glfwTerminate();
-
         return EXIT_FAILURE;
     }
 
@@ -209,9 +146,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         MessageBoxA(nullptr, "Failed to initialize GLAD", "Error", MB_OK | MB_ICONERROR);
         glfwDestroyWindow(window);
         glfwTerminate();
-
         return EXIT_FAILURE;
     }
+
+    resizeComputeTexture(windowWidth, windowHeight);
 
     float vertices[] = {-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f};
     GLuint vao, vbo;
@@ -223,32 +161,89 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, shaders::vertexShader);
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, shaders::mandelbrotFragmentShader);
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
+    GLuint computeProgram = glCreateProgram();
+    const auto [didComputeShaderCompile, computeShader] = utils::compileShader(&computeProgram, GL_COMPUTE_SHADER, IDR_COMPUTE_SHADER);
 
-    int success;
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    if (!success)
+    if (didComputeShaderCompile == EXIT_FAILURE)
     {
-        char info[512];
-        glGetProgramInfoLog(shaderProgram, 512, nullptr, info);
-        MessageBoxA(nullptr, info, "Shader Program Link Error", MB_OK | MB_ICONERROR);
-        glDeleteProgram(shaderProgram);
-        glfwDestroyWindow(window);
-        glfwTerminate();
-
+        MessageBoxA(nullptr, "Failed to compile compute shader", "Error", MB_OK | MB_ICONERROR);
         return EXIT_FAILURE;
     }
 
-    glfwSetKeyCallback(window, keyCallback);
+    glLinkProgram(computeProgram);
+    glDeleteShader(computeShader);
+
+    GLuint renderProgram = glCreateProgram();
+
+    const auto [didVertexShaderCompile, vertexShader] = utils::compileShader(&renderProgram, GL_VERTEX_SHADER, IDR_VERTEX_SHADER);
+
+    if (didVertexShaderCompile == EXIT_FAILURE)
+    {
+        MessageBoxA(nullptr, "Failed to compile vertex shader", "Error", MB_OK | MB_ICONERROR);
+        return EXIT_FAILURE;
+    }
+
+    const auto [didFragmentShaderCompile, fragmentShader] = utils::compileShader(&renderProgram, GL_FRAGMENT_SHADER, IDR_FRAGMENT_SHADER);
+
+    if (didFragmentShaderCompile == EXIT_FAILURE)
+    {
+        MessageBoxA(nullptr, "Failed to compile fragment shader", "Error", MB_OK | MB_ICONERROR);
+        return EXIT_FAILURE;
+    }
+
+    glLinkProgram(renderProgram);
+    glDeleteShader(computeShader);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    inputManager.Initialize(window);
+
+    inputManager.onKeyPressed.Connect([](int key)
+                                      {
+        switch (key)
+        {
+            case GLFW_KEY_ESCAPE:
+                glfwSetWindowShouldClose(glfwGetCurrentContext(), true);
+                break;
+            case GLFW_KEY_SPACE:
+                CaptureScreenshot();
+                break;
+            default:
+                break;
+        } });
+
+    inputManager.onKeyHeld.Connect([](int key)
+                                   {
+        switch (key)
+        {
+            case GLFW_KEY_UP:
+                sharedData->iterations += 50;
+                break;
+            case GLFW_KEY_DOWN:
+                sharedData->iterations = std::max<int>(50, sharedData->iterations - 50);
+                break;
+            case GLFW_KEY_E:
+                zoomView(ZOOM_FACTOR);
+                break;
+            case GLFW_KEY_Q:
+                zoomView(1.0 / ZOOM_FACTOR);
+                break;
+            case GLFW_KEY_W:
+                shiftView(0.0, 0.1);
+                break;
+            case GLFW_KEY_S:
+                shiftView(0.0, -0.1);
+                break;
+            case GLFW_KEY_A:
+                shiftView(-0.1, 0.0);
+                break;
+            case GLFW_KEY_D:
+                shiftView(0.1, 0.0);
+                break;
+            default:
+                break;
+        } });
+
     glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
     GLuint ubo;
@@ -264,15 +259,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     sharedData->iterations = 500;
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
 
-    glUseProgram(shaderProgram);
-    glBindVertexArray(vao);
     glViewport(0, 0, windowWidth, windowHeight);
 
     while (!glfwWindowShouldClose(window))
     {
+        glUseProgram(computeProgram);
+        glBindImageTexture(0, computeTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
+        unsigned int xGroups = (windowWidth + 15) / 16;
+        unsigned int yGroups = (windowHeight + 15) / 16;
+        glDispatchCompute(xGroups, yGroups, 1);
+
+        glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
+
         glClearColor(0, 0, 0, 1);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        glUseProgram(renderProgram);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, computeTexture);
+        glUniform1i(glGetUniformLocation(renderProgram, "renderTexture"), 0);
+
+        glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
