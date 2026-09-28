@@ -1,0 +1,5 @@
+#pragma once
+
+#define IDR_COMPUTE_SHADER 100
+#define IDR_FRAGMENT_SHADER 101
+#define IDR_VERTEX_SHADER 102

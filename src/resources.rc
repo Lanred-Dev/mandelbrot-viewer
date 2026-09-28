@@ -1,0 +1,5 @@
+#include "resource.h"
+
+IDR_COMPUTE_SHADER RCDATA "../shaders/mandelbrot.comp"
+IDR_VERTEX_SHADER RCDATA "../shaders/vertex.vert"
+IDR_FRAGMENT_SHADER RCDATA "../shaders/fragment.frag"
