@@ -27,6 +27,8 @@ struct Data
     double complexMin;
     double complexMax;
     int iterations;
+    float colorFrequency;
+    int colorMode;
     int padding[3];
 };
 
@@ -198,7 +200,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     inputManager.Initialize(window);
 
-    inputManager.onKeyPressed.Connect([](int key)
+    inputManager.onKeyPressed.Connect([](int key, int mods)
                                       {
         switch (key)
         {
@@ -208,11 +210,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             case GLFW_KEY_SPACE:
                 CaptureScreenshot();
                 break;
+            case GLFW_KEY_C:
+                sharedData->colorMode = (sharedData->colorMode + 1) % 2;
+                break;
             default:
                 break;
         } });
 
-    inputManager.onKeyHeld.Connect([](int key)
+    inputManager.onKeyHeld.Connect([](int key, int mods)
                                    {
         switch (key)
         {
@@ -240,6 +245,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             case GLFW_KEY_D:
                 shiftView(0.1, 0.0);
                 break;
+            case GLFW_KEY_RIGHT:
+                sharedData->colorFrequency += mods & GLFW_MOD_SHIFT ? 0.5f : 0.1f;
+                break;
+            case GLFW_KEY_LEFT:
+                sharedData->colorFrequency = std::max<float>(0.1f, sharedData->colorFrequency - (mods & GLFW_MOD_SHIFT ? 0.5f : 0.1f));
+                break;
             default:
                 break;
         } });
@@ -257,6 +268,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     sharedData->complexMin = -1.5;
     sharedData->complexMax = 1.5;
     sharedData->iterations = 500;
+    sharedData->colorFrequency = 3.0f;
+    sharedData->colorMode = 0;
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
 
     glViewport(0, 0, windowWidth, windowHeight);
