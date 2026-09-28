@@ -25,8 +25,8 @@ namespace Core
                 inputManager->pressedKeys[key] = true;
                 inputManager->heldKeys[key] = true;
                 inputManager->lastKeyHoldTimes[key] = now;
-                inputManager->onKeyPressed.Emit(key);
-                inputManager->onKeyHeld.Emit(key);
+                inputManager->onKeyPressed.Emit(key, mods);
+                inputManager->onKeyHeld.Emit(key, mods);
             }
             else if (action == GLFW_REPEAT)
             {
@@ -35,7 +35,7 @@ namespace Core
                     if (isHeld && now - inputManager->lastKeyHoldTimes[heldKey] > inputManager->KEY_HOLD_DEBOUNCE)
                     {
                         inputManager->lastKeyHoldTimes[heldKey] = now;
-                        inputManager->onKeyHeld.Emit(heldKey);
+                        inputManager->onKeyHeld.Emit(heldKey, mods);
                     }
                 }
             }
@@ -44,7 +44,7 @@ namespace Core
                 inputManager->pressedKeys[key] = false;
                 inputManager->heldKeys[key] = false;
                 inputManager->lastKeyHoldTimes[key] = 0.0f;
-                inputManager->onKeyReleased.Emit(key);
+                inputManager->onKeyReleased.Emit(key, mods);
             }
         }
     }

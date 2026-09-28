@@ -11,9 +11,9 @@ namespace Core
         class InputManager
         {
         public:
-            Signal<int> onKeyPressed;
-            Signal<int> onKeyReleased;
-            Signal<int> onKeyHeld;
+            Signal<int, int> onKeyPressed;
+            Signal<int, int> onKeyReleased;
+            Signal<int, int> onKeyHeld;
             
             void Initialize(GLFWwindow *window);
             bool IsKeyPressed(int key);
